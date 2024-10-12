@@ -2,7 +2,17 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Authing, Friending, Posting, Sessioning } from "./app";
+import {
+  Authing,
+  Badging,
+  Friending,
+  Observing,
+  PartyMode,
+  Posting,
+  PostingRoute,
+  Scrapbooking,
+  Sessioning
+} from "./app";
 import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
 import Responses from "./responses";
@@ -152,6 +162,92 @@ class Routes {
     const fromOid = (await Authing.getUserByUsername(from))._id;
     return await Friending.rejectRequest(fromOid, user);
   }
+
+
+  // Observing routes
+  @Router.get("/observations")
+  async getObservations() {
+    return await Observing.getObservations();
+  }
+
+  @Router.post("/observations")
+  async createObservation(session: SessionDoc, content: string, location: { latitude: number; longitude: number }) {
+    const user = Sessioning.getUser(session);
+    return await Observing.create(user, { id: new ObjectId().toString(), type: "organism" }, location);
+  }
+
+  // Posting Route routes
+  @Router.post("/routes")
+  async createRoute(session: SessionDoc, location: { latitude: number; longitude: number }) {
+    const user = Sessioning.getUser(session);
+    return await PostingRoute.startRoute(user, location);
+  }
+
+  @Router.patch("/routes/:id/poi")
+  async addPOI(session: SessionDoc, id: string, location: { latitude: number; longitude: number }, description: string) {
+    const user = Sessioning.getUser(session);
+    //return await PostingRoute.addPOI(new ObjectId(id), location, undefined, description);
+  }
+
+  // Gift Exchange routes
+  @Router.post("/gifts")
+  async earnGift(session: SessionDoc, gift: { name: string, value: number }) {
+    const user = Sessioning.getUser(session);
+    //return await GiftExchange.earnGift(user, gift);
+  }
+
+  @Router.post("/gifts/send/:to")
+  async sendGift(session: SessionDoc, to: string, gift: { name: string, value: number }) {
+    const user = Sessioning.getUser(session);
+    const recipient = await Authing.getUserByUsername(to);
+   // return await GiftExchange.sendGift(user, recipient._id, gift);
+  }
+
+  // Scrapbook routes
+  @Router.post("/scrapbook")
+  async addScrapbookItem(session: SessionDoc, pageNumber: number, coordinate: { x: number; y: number }, postId: ObjectId) {
+    const user = Sessioning.getUser(session);
+    return await Scrapbooking.addPost(postId, pageNumber, coordinate);
+  }
+
+  @Router.delete("/scrapbook/:id")
+  async removeScrapbookItem(session: SessionDoc, id: string) {
+    return await Scrapbooking.removePost(new ObjectId(id));
+  }
+
+  // Badge routes
+  @Router.post("/badges")
+  async earnBadge(session: SessionDoc, badge: { name: string, criteria: string }) {
+    const userId = Sessioning.getUser(session);
+    return await Badging.earnBadge(userId, { ...badge, userId, _id: new ObjectId(), dateCreated: new Date(), dateUpdated: new Date() });
+  }
+
+  @Router.get("/badges")
+  async viewBadges(session: SessionDoc) {
+    const user = Sessioning.getUser(session);
+    return await Badging.viewBadges(user);
+  }
+
+  // Party Mode routes
+  @Router.post("/party")
+  async createParty(session: SessionDoc) {
+    const user = Sessioning.getUser(session);
+    return await PartyMode.createParty(user);
+  }
+
+  @Router.patch("/party/:id/join")
+  async joinParty(session: SessionDoc, id: string) {
+    const user = Sessioning.getUser(session);
+    return await PartyMode.joinParty(user, new ObjectId(id));
+  }
+
+  @Router.patch("/party/:id/share")
+  async shareObservationWithParty(session: SessionDoc, id: string, observationId: string) {
+    // const observation = await Observing.getObservations().find(obs => obs._id.equals(observationId));
+    // return await PartyMode.shareObservation(observation, new ObjectId(id));
+  }
+
+
 }
 
 /** The web app. */

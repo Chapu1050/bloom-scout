@@ -15,8 +15,11 @@ export interface PointOfInterest {
   }
 
 export interface RouteDoc extends BaseDoc {
+    name: String;
+    tags?: String[] 
     author: ObjectId;                  // The user who created the route
     waypoints: PointOfInterest[];       // List of Points of Interest (POIs)
     completed: boolean;                 // Whether the route is completed
-                 // Optional route options (e.g., difficulty level)
+    imageURL?: string;
+    activeUsers: Set<ObjectId>;
   }

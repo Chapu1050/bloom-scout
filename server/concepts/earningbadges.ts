@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import DocCollection from "../framework/doc";
 import { Badge } from "./adts/scrapbookItems"; // Assuming Badge extends BaseDoc
 
-export class BadgeSystemConcept {
+export default class BadgeSystemConcept {
   public badges: DocCollection<Badge>;
 
   constructor(collectionName: string) {

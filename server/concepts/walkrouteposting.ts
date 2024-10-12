@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 import DocCollection from "../framework/doc";
 import { Observation } from "./adts/observation";
 import { Location, RouteDoc } from "./adts/walkroute";
-import { NotAllowedError, NotFoundError } from "./errors";
+import { NotFoundError } from "./errors";
 
 export default class PostingRouteConcept {
   public readonly routes: DocCollection<RouteDoc>;
@@ -11,9 +11,32 @@ export default class PostingRouteConcept {
     this.routes = new DocCollection<RouteDoc>(collectionName);
   }
 
-  async startRoute(author: ObjectId, loc: Location) {
-    const _id = await this.routes.createOne({ author, waypoints: [{ location: loc, description: "Start point" }], completed: false });
-    return { msg: "Route started!", route: await this.routes.readOne({ _id }) };
+  async startRoute(userId: ObjectId, loc: Location) {
+    const newRoute = {
+      author: userId,
+      waypoints: [{ location: loc, description: "Start point" }],
+      completed: false,
+      name: "Unnamed Route",   // Default name
+      activeUsers: new Set([userId]), // Add user to active users
+    };
+    await this.routes.createOne(newRoute);
+    return { msg: "Route started!", route: newRoute };
+  }
+
+  async addActiveUser(routeId: ObjectId, userId: ObjectId) {
+    const route = await this.routes.readOne({ _id: routeId });
+    if (!route || route.completed) throw new NotFoundError(`Route ${routeId} not found or completed!`);
+    route.activeUsers.add(userId);
+    await this.routes.replaceOne({ _id: routeId }, route);
+    return { msg: "User added to active users!" };
+  }
+
+  async removeActiveUser(routeId: ObjectId, userId: ObjectId) {
+    const route = await this.routes.readOne({ _id: routeId });
+    if (!route || route.completed) throw new NotFoundError(`Route ${routeId} not found or completed!`);
+    route.activeUsers.delete(userId);
+    await this.routes.replaceOne({ _id: routeId }, route);
+    return { msg: "User removed from active users!" };
   }
 
   async addPOI(_id: ObjectId, loc: Location, desc: string, obs?: Observation) {
@@ -27,10 +50,17 @@ export default class PostingRouteConcept {
   async completeRoute(_id: ObjectId) {
     const route = await this.routes.readOne({ _id });
     if (!route || route.completed) throw new NotFoundError(`Route ${_id} not found or completed!`);
+
+    
+    for (const userId of Array.from(route.activeUsers)) {
+        await this.removeActiveUser(_id, userId); // Call removeActiveUser for each active user
+    }
+
     route.completed = true;
     await this.routes.replaceOne({ _id }, route);
     return { msg: "Route completed!" };
   }
+
 
   async delete(_id: ObjectId) {
     await this.routes.deleteOne({ _id });
@@ -40,12 +70,6 @@ export default class PostingRouteConcept {
   async assertAuthorIsUser(_id: ObjectId, user: ObjectId) {
     const route = await this.routes.readOne({ _id });
     if (!route) throw new NotFoundError(`Route ${_id} does not exist!`);
-    if (route.author.toString() !== user.toString()) throw new RouteAuthorNotMatchError(user, _id);
-  }
-}
-
-export class RouteAuthorNotMatchError extends NotAllowedError {
-  constructor(public readonly author: ObjectId, public readonly _id: ObjectId) {
-    super("{0} is not the author of route {1}!", author, _id);
+    if (route.author.toString() !== user.toString()) throw new Error("Route does not match");
   }
 }

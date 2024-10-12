@@ -4,7 +4,7 @@ import { Observation } from "./adts/observation";
 import { Party } from "./adts/party";
 
 
-export class PartyModeConcept {
+export default class PartyModeConcept {
   public parties: DocCollection<Party>;
 
   constructor(collectionName: string) {
@@ -12,13 +12,10 @@ export class PartyModeConcept {
   }
 
   async createParty(leader: ObjectId) {
-    const newParty: Party = {
+    const newParty = {
       leader,
       users: new Set([leader]),   // Initialize with the leader as the first member
       sharedObservations: [],     // Empty list of shared observations
-      dateCreated: new Date(),    // BaseDoc field
-      dateUpdated: new Date(),    // BaseDoc field
-      _id: new ObjectId()         // BaseDoc field
     };
     const _id = await this.parties.createOne(newParty);
     return { msg: "Party created!", partyId: _id };
