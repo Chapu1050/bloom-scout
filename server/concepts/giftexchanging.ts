@@ -10,23 +10,33 @@ export default class GiftExchangeConcept {
     this.gifts = new DocCollection<Gift>(collectionName); // Use GiftDoc to include userId
   }
 
-  async earnGift(userId: ObjectId, gift: Gift) {
+  async earnGift(userId: ObjectId, gift: { value: number, route: ObjectId }) {
     const giftDoc = { ...gift, userId }; // Include userId in the gift document
-    await this.gifts.createOne(giftDoc); // Save gift associated with user
-    return { msg: "Gift earned!", gift };
+    const giftMongo = await this.gifts.createOne(giftDoc); // Save gift associated with user
+    return { msg: `Gift earned! ${giftMongo}` };
   }
 
-  async sendGift(senderId: ObjectId, recipientId: ObjectId, gift: Gift) {
-    const senderGift = await this.gifts.readOne({ userId: senderId, id: gift._id });
-    
+  async sendGift(senderId: ObjectId, recipientId: ObjectId, giftId: ObjectId) {
+    const senderGift = await this.gifts.readOne({ _id: giftId, userId: senderId });
+
     if (!senderGift) {
-      throw new NotFoundError("Gift not found in sender's inventory");
+      throw new NotFoundError(`Gift not found in sender's inventory, gift ID: ${giftId}`);
     }
 
-    await this.gifts.deleteOne({ userId: senderId, id: gift._id }); // Remove gift from sender
-    const recipientGiftDoc = { ...gift, userId: recipientId }; // Create a new gift document for recipient
-    await this.gifts.createOne(recipientGiftDoc); // Add gift to recipient's inventory
+    // Update the userId to the new recipientId
+    senderGift.userId = recipientId;
+    senderGift.dateUpdated = new Date(); // Update the timestamp
 
-    return { msg: `Gift sent to recipient!`, gift };
+    // Save the updated gift in the database under the recipient's inventory
+    await this.gifts.replaceOne({ _id: giftId}, senderGift);
+
+    return { msg: `Gift sent to recipient: ${recipientId}!`, gift: senderGift };
   }
+
+
+  async getGiftInventory(userId: ObjectId) {
+    const gifts = await this.gifts.readMany({ userId }); // Fetch all gifts for the user
+    return gifts; // Return the user's gift inventory
+  }
+
 }

@@ -1,11 +1,10 @@
 import { ObjectId } from "mongodb";
 
-import { Router, getExpressRouter } from "./framework/router";
-
 import {
   Authing,
   Badging,
   Friending,
+  GiftExchange,
   Observing,
   PartyMode,
   Posting,
@@ -15,6 +14,7 @@ import {
 } from "./app";
 import { PostOptions } from "./concepts/posting";
 import { SessionDoc } from "./concepts/sessioning";
+import { Router, getExpressRouter } from "./framework/router";
 import Responses from "./responses";
 
 import { z } from "zod";
@@ -164,7 +164,6 @@ class Routes {
   }
 
 
-  // Observing routes
   @Router.get("/observations")
   async getObservations() {
     return await Observing.getObservations();
@@ -176,50 +175,33 @@ class Routes {
     return await Observing.create(user, { id: new ObjectId().toString(), type: "organism" }, location);
   }
 
-  // Posting Route routes
-  @Router.post("/routes")
-  async createRoute(session: SessionDoc, location: { latitude: number; longitude: number }) {
-    const user = Sessioning.getUser(session);
-    return await PostingRoute.startRoute(user, location);
-  }
-
-  @Router.patch("/routes/:id/poi")
-  async addPOI(session: SessionDoc, id: string, location: { latitude: number; longitude: number }, description: string) {
-    const user = Sessioning.getUser(session);
-    //return await PostingRoute.addPOI(new ObjectId(id), location, undefined, description);
-  }
-
-  // Gift Exchange routes
+  // Gift Exchange Routes
   @Router.post("/gifts")
-  async earnGift(session: SessionDoc, gift: { name: string, value: number }) {
+  async earnGift(session: SessionDoc, value: number, route: string ) {
+    const gift = {value, route:  new ObjectId(route)};
     const user = Sessioning.getUser(session);
-    //return await GiftExchange.earnGift(user, gift);
+    return await GiftExchange.earnGift(user, gift);
   }
 
   @Router.post("/gifts/send/:to")
-  async sendGift(session: SessionDoc, to: string, gift: { name: string, value: number }) {
+  async sendGift(session: SessionDoc, to: string, giftId: string) {
     const user = Sessioning.getUser(session);
     const recipient = await Authing.getUserByUsername(to);
-   // return await GiftExchange.sendGift(user, recipient._id, gift);
+    return await GiftExchange.sendGift(user, recipient._id, new ObjectId(giftId));
   }
 
-  // Scrapbook routes
-  @Router.post("/scrapbook")
-  async addScrapbookItem(session: SessionDoc, pageNumber: number, coordinate: { x: number; y: number }, postId: ObjectId) {
+  @Router.get("/gifts")
+  async getGift(session: SessionDoc) {
     const user = Sessioning.getUser(session);
-    return await Scrapbooking.addPost(postId, pageNumber, coordinate);
+    return await GiftExchange.getGiftInventory(user);
   }
 
-  @Router.delete("/scrapbook/:id")
-  async removeScrapbookItem(session: SessionDoc, id: string) {
-    return await Scrapbooking.removePost(new ObjectId(id));
-  }
-
-  // Badge routes
+  // Badge System Routes
   @Router.post("/badges")
-  async earnBadge(session: SessionDoc, badge: { name: string, criteria: string }) {
+  async earnBadge(session: SessionDoc, name: string, criteria: string ) {
     const userId = Sessioning.getUser(session);
-    return await Badging.earnBadge(userId, { ...badge, userId, _id: new ObjectId(), dateCreated: new Date(), dateUpdated: new Date() });
+    const badge = {name, criteria}
+    return await Badging.earnBadge(userId, badge );
   }
 
   @Router.get("/badges")
@@ -228,7 +210,43 @@ class Routes {
     return await Badging.viewBadges(user);
   }
 
-  // Party Mode routes
+  // Posting Routes (Routes for uploading and completing)
+  @Router.post("/routes")
+  async createRoute(session: SessionDoc, name: string, location: { latitude: number; longitude: number }) {
+    const user = Sessioning.getUser(session);
+    return await PostingRoute.startRoute(user, name, location);
+  }
+
+  @Router.get("/routes")
+  async getRoutes() {
+    return await PostingRoute.getRoutes();
+  }
+
+  @Router.patch("/routes/:id/poi")
+  async addPOI(session: SessionDoc, id: string, location: { latitude: number; longitude: number }, description: string) {
+    const user = Sessioning.getUser(session);
+    return await PostingRoute.addPOI(new ObjectId(id), location, description);
+  }
+
+  // Scrapbook Routes
+  @Router.post("/scrapbook")
+  async addScrapbookItem(session: SessionDoc, pageNumber: number, coordinate: { x: number; y: number }, postId: ObjectId) {
+    const user = Sessioning.getUser(session);
+    return await Scrapbooking.addPost(user, postId, pageNumber, coordinate);
+  }
+
+  @Router.get("/scrapbook")
+  async getScrapbookItems(session: SessionDoc) {
+    const user = Sessioning.getUser(session);
+    return await Scrapbooking.getPosts(user);
+  }
+
+  @Router.delete("/scrapbook/:id")
+  async removeScrapbookItem(session: SessionDoc, id: string) {
+    return await Scrapbooking.removePost(new ObjectId(id));
+  }
+
+  // Party Mode Routes
   @Router.post("/party")
   async createParty(session: SessionDoc) {
     const user = Sessioning.getUser(session);
@@ -243,13 +261,29 @@ class Routes {
 
   @Router.patch("/party/:id/share")
   async shareObservationWithParty(session: SessionDoc, id: string, observationId: string) {
-    // const observation = await Observing.getObservations().find(obs => obs._id.equals(observationId));
-    // return await PartyMode.shareObservation(observation, new ObjectId(id));
+    const observations = await Observing.getObservations();
+    const observation = observations.find(obs => obs._id.equals(observationId));
+
+    // Error handling if observation is not found
+    if (!observation) {
+        throw new Error(`Observation with ID ${observationId} not found`);
+    }
+
+    // Share the observation with the party
+    const party = await PartyMode.getParty(new ObjectId(id));
+
+    if (!party) {
+        throw new Error(`Party with ID ${id} not found`);
+    }
+
+    // Share the observation with all users in the party
+    for (const userId of party.users) {
+        await Observing.addSharedObservation(userId, observation); // Implement this method to update user observations
+    }
+
+    return await PartyMode.shareObservation(new ObjectId(observationId), new ObjectId(id));
   }
-
-
 }
-
 /** The web app. */
 export const app = new Routes();
 

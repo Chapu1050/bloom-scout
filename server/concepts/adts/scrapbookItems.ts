@@ -21,5 +21,5 @@ export interface ScrapbookItem extends BaseDoc{
   itemId: ObjectId;
   page: number;
   position: {x: number, y: number}
-
+  userId?: ObjectId;
 }

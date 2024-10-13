@@ -10,15 +10,16 @@ export default class ScrapbookConcept {
     this.posts = new DocCollection<ScrapbookItem>(collectionName);
   }
 
-  async addPost(itemId: ObjectId, pageNumber: number, position: { x: number; y: number }) {
+  async addPost(userId: ObjectId, itemId: ObjectId, pageNumber: number, position: { x: number; y: number }) {
     // Create a new scrapbook entry with the itemID, page number, and position
     const scrapbookEntry = {
       itemId,
       page: pageNumber,
       position,
+      userId: userId,
     };
-    await this.posts.createOne(scrapbookEntry);
-    return { msg: "Post added to scrapbook!", post: scrapbookEntry };
+    const scrapBookEntryMongo = await this.posts.createOne(scrapbookEntry);
+    return { msg: "Post added to scrapbook!", post: scrapBookEntryMongo };
   }
 
   async removePost(postId: ObjectId) {
@@ -30,7 +31,7 @@ export default class ScrapbookConcept {
     return { msg: "Post removed from scrapbook!" };
   }
 
-  async getPosts() {
-    return await this.posts.readMany({});
+  async getPosts(userId: ObjectId) {
+    return await this.posts.readMany({ userId });
   }
 }

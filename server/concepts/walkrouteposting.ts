@@ -11,16 +11,16 @@ export default class PostingRouteConcept {
     this.routes = new DocCollection<RouteDoc>(collectionName);
   }
 
-  async startRoute(userId: ObjectId, loc: Location) {
+  async startRoute(userId: ObjectId, name: string, loc: Location) {
     const newRoute = {
       author: userId,
       waypoints: [{ location: loc, description: "Start point" }],
       completed: false,
-      name: "Unnamed Route",   // Default name
+      name: name,
       activeUsers: new Set([userId]), // Add user to active users
     };
-    await this.routes.createOne(newRoute);
-    return { msg: "Route started!", route: newRoute };
+    const dataRoute = await this.routes.createOne(newRoute);
+    return { msg: "Route started!", route: dataRoute };
   }
 
   async addActiveUser(routeId: ObjectId, userId: ObjectId) {
@@ -61,6 +61,10 @@ export default class PostingRouteConcept {
     return { msg: "Route completed!" };
   }
 
+  async getRoutes() {
+    // Fetch all routes, sorted by creation date or any other criteria
+    return await this.routes.readMany({}, { sort: { _id: -1 } });
+  }
 
   async delete(_id: ObjectId) {
     await this.routes.deleteOne({ _id });

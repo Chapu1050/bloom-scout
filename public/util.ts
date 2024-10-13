@@ -80,9 +80,120 @@ const operations: Operation[] = [
     method: "DELETE",
     fields: { id: "input" },
   },
-  //
-  // ...
-  //
+
+  {
+    name: "Get Observations",
+    endpoint: "/api/observations",
+    method: "GET",
+    fields: {},
+  },
+  {
+    name: "Create Observation",
+    endpoint: "/api/observations",
+    method: "POST",
+    fields: { content: "input", location: { latitude: "input", longitude: "input" } },
+  },
+
+  // Gift Exchange
+  {
+    name: "Earn Gift",
+    endpoint: "/api/gifts",
+    method: "POST",
+    fields: { value: "input", route: "input" },
+  },
+  {
+    name: "Send Gift",
+    endpoint: "/api/gifts/send/:to",
+    method: "POST",
+    fields: { to: "input", giftId: "input" },
+  },
+
+  {
+    name: "Get Gifts",
+    endpoint: "/api/gifts",
+    method: "GET",
+    fields: { },
+  },
+
+  // Badging
+  {
+    name: "Earn Badge",
+    endpoint: "/api/badges",
+    method: "POST",
+    fields: { name: "input", criteria: "input" },
+  },
+  {
+    name: "View Badges",
+    endpoint: "/api/badges",
+    method: "GET",
+    fields: {},
+  },
+
+  //Routes
+  {
+    name: "Create Route",
+    endpoint: "/api/routes",
+    method: "POST",
+    fields: { name: "input", location: { latitude: "input", longitude: "input" } },
+  },
+  {
+    name: "Add POI to Route",
+    endpoint: "/api/routes/:id/poi",
+    method: "PATCH",
+    fields: { id: "input", location: { latitude: "input", longitude: "input" }, description: "input" },
+  },
+
+  {
+    name: "Get Routes",
+    endpoint: "/api/routes",
+    method: "GET",
+    fields: { },
+  },
+
+  // Scrapbooking
+  {
+    name: "Add Scrapbook Item",
+    endpoint: "/api/scrapbook",
+    method: "POST",
+    fields: { pageNumber: "input", coordinate: { x: "input", y: "input" }, postId: "input" },
+  },
+
+  {
+    name: "Get Scrapbook Items",
+    endpoint: "/api/scrapbook",
+    method: "GET",
+    fields: {  },
+  },
+
+
+  {
+    name: "Remove Scrapbook Item",
+    endpoint: "/api/scrapbook/:id",
+    method: "DELETE",
+    fields: { id: "input" },
+  },
+
+  // Party Mode
+  {
+    name: "Create Party",
+    endpoint: "/api/party",
+    method: "POST",
+    fields: {},
+  },
+  {
+    name: "Join Party",
+    endpoint: "/api/party/:id/join",
+    method: "PATCH",
+    fields: { id: "input" },
+  },
+  {
+    name: "Share Observation with Party",
+    endpoint: "/api/party/:id/share",
+    method: "PATCH",
+    fields: { id: "input", observationId: "input" },
+  },
+
+
 ];
 
 /*

@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { BaseDoc } from "../../framework/doc";
 
 export interface Observation extends BaseDoc{
+    userId: ObjectId;       //Id of user who has observation
     author: ObjectId;        // ID of the user who made the observation
     content: Content;       // The observed content (e.g., species, post)
     location: Location;    // Where the observation was made (latitude, longitude)
